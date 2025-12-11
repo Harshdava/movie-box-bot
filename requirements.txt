@@ -1,5 +1,6 @@
- python-telegram-bot
+python-telegram-bot>=21.9
 motor
 pymongo
 flask
+gunicorn
 waitress
