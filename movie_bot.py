@@ -1,17 +1,18 @@
 # movie_bot.py
 # MongoDB Version: Stores data in Cloud so it never gets deleted.
-# Requires: python-telegram-bot, motor, pymongo, flask
+# Requires: python-telegram-bot, motor, pymongo, flask, waitress
 
 import os
 import asyncio
 import logging
 from threading import Thread
 from flask import Flask
+from waitress import serve  # <--- NEW IMPORT
 from motor.motor_asyncio import AsyncIOMotorClient
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# --- WEB SERVER TO KEEP BOT ALIVE (Flask) ---
+# --- WEB SERVER TO KEEP BOT ALIVE (Flask + Waitress) ---
 app_server = Flask('')
 
 @app_server.route('/')
@@ -21,7 +22,9 @@ def home():
 def run_server():
     # Use port 8080 or the one Render assigns
     port = int(os.environ.get("PORT", 8080))
-    app_server.run(host='0.0.0.0', port=port)
+    # OLD: app_server.run(host='0.0.0.0', port=port)
+    # NEW: Using Waitress for Production
+    serve(app_server, host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run_server)
@@ -123,7 +126,6 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     movie_id = args[0].strip()
 
     # Fetch items from MongoDB
-    # .find() returns a cursor, we convert it to a list
     cursor = collection.find({"movie_id": movie_id})
     rows = await cursor.to_list(length=None)
 
@@ -192,7 +194,7 @@ async def list_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def main():
-    # 1. Start the Flask Server (Keep Alive)
+    # 1. Start the Flask Server (Keep Alive) using Waitress
     keep_alive()
 
     # 2. Connect to MongoDB
@@ -213,7 +215,6 @@ async def main():
 
     print("Bot is starting...")
     
-    # Using run_polling which handles the loop automatically
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
