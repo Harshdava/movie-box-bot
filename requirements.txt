@@ -3,3 +3,4 @@ motor
 pymongo
 flask
 gunicorn
+waitress
